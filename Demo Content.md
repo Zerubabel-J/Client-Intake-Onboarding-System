@@ -1,14 +1,14 @@
 
- **show the value, not just the work.** 
-
-The best way to showcase this project, broken down into a professional, multi-layered strategy.
- A brilliant project that isn't presented well is like a masterpiece locked in a dark room.
 
 ---
 
 ### **The Architect's Showcase: A Three-Part Strategy**
 
 #### **Part 1: The Static Asset - The One-Page Case Study (PDF)**
+ **show the value, not just the work.** 
+
+The best way to showcase this project, broken down into a professional, multi-layered strategy.
+ A brilliant project that isn't presented well is like a masterpiece locked in a dark room.
 
 This is your primary tool. It's a professional document you can attach to Upwork proposals or send as a follow-up. It should be concise, visually appealing, and focused on business outcomes.
 
