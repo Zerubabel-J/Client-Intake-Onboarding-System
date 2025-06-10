@@ -1,0 +1,467 @@
+{
+  "name": "Client Intake & Onboarding",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.body.Name }} {{ $json.body.Email }} {{ $json.body.Company }} {{ $json.body.Message }}",
+        "options": {
+          "systemMessage": "=You are an expert assistant for a digital marketing agency. Analyze the following client message: '{{ $json.body.message }}'. Extract the primary service they are asking for (e.g., SEO, PPC, Web Design, Content Marketing), estimate their project size (Small, Medium, Large) based on the language they use, and provide a one-sentence summary of their core request. Respond ONLY with a valid JSON object in the format: {\n  \"service\": \"SEO & PPC\",\n  \"size\": \"Large\",\n  \"summary\": \"Client seeks a comprehensive SEO overhaul and a new PPC campaign for their Q4 product launch with a significant budget.\"\n}"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 2,
+      "position": [
+        -380,
+        420
+      ],
+      "id": "9b8f3280-92ad-470c-be99-b8c9fcf6108c",
+      "name": "AI Agent"
+    },
+    {
+      "parameters": {
+        "jsCode": "// This is the Architect's \"Data Sanitizer\" v2.\n// It now gracefully handles cases where the AI does not return valid JSON.\n\n// Get the raw output from the Gemini node.\nconst rawOutput = $input.first().json.output;\n\n// Default structure to use if parsing fails.\nconst defaultResponse = {\n  service: 'N/A',\n  size: 'Unknown',\n  summary: 'AI analysis failed or did not return valid data.'\n};\n\ntry {\n  // We first check if the output is null, undefined, or not a string.\n  if (typeof rawOutput !== 'string' || !rawOutput) {\n    throw new Error('AI output was empty or not a string.');\n  }\n\n  // Find the start and end of the potential JSON content.\n  const startIndex = rawOutput.indexOf('{');\n  const endIndex = rawOutput.lastIndexOf('}');\n\n  // Check if we found a valid JSON structure.\n  if (startIndex === -1 || endIndex === -1 || endIndex < startIndex) {\n    throw new Error('AI output did not contain a valid JSON object.');\n  }\n\n  // Slice out the clean JSON string.\n  const jsonString = rawOutput.substring(startIndex, endIndex + 1);\n\n  // Convert the clean string into a real JavaScript object.\n  const cleanJson = JSON.parse(jsonString);\n\n  // Return the successfully parsed object.\n  return [{\n    json: cleanJson\n  }];\n\n} catch (error) {\n  // If ANY of the steps in the 'try' block fail, we land here.\n  console.error(`Error parsing AI output: ${error.message}`);\n  console.error(`Raw AI Output was: ${rawOutput}`);\n\n  // IMPORTANT: Instead of crashing, we return the default, safe object.\n  // This allows the rest of the workflow to continue without errors.\n  return [{\n    json: defaultResponse\n  }];\n}"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        -20,
+        420
+      ],
+      "id": "e39a921f-ff45-4768-8114-2203b87667b4",
+      "name": "Clean AI Output"
+    },
+    {
+      "parameters": {
+        "modelName": "models/gemini-2.0-flash",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        -500,
+        620
+      ],
+      "id": "3bac82c7-a65f-4995-b1de-2cf1f341dee9",
+      "name": "Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "QK7gPHgHICV4nP2G",
+          "name": "Gemini(PaLM) Api "
+        }
+      }
+    },
+    {
+      "parameters": {
+        "tableId": "leads",
+        "fieldsUi": {
+          "fieldValues": [
+            {
+              "fieldId": "name",
+              "fieldValue": "={{ $('Webhook').item.json.body.Name }}\n"
+            },
+            {
+              "fieldId": "email",
+              "fieldValue": "={{ $('Webhook').item.json.body.email }}"
+            },
+            {
+              "fieldId": "company",
+              "fieldValue": "={{ $('Webhook').item.json.body.company }}"
+            },
+            {
+              "fieldId": "initial_message",
+              "fieldValue": "={{ $('Webhook').item.json.body.message }}"
+            },
+            {
+              "fieldId": "ai_service",
+              "fieldValue": "={{ $json.service }}"
+            },
+            {
+              "fieldId": "ai_size",
+              "fieldValue": "={{ $json.size }}"
+            },
+            {
+              "fieldId": "ai_summary",
+              "fieldValue": "={{ $json.summary }}"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.supabase",
+      "typeVersion": 1,
+      "position": [
+        180,
+        420
+      ],
+      "id": "b71a1601-79ed-4547-92f5-8611d6d4e454",
+      "name": "Save to Supabase",
+      "credentials": {
+        "supabaseApi": {
+          "id": "fBIVsUgo2WvnXMEQ",
+          "name": "Supabase account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "folder",
+        "name": "={{ $json.company }} - {{ new Date().getFullYear() }}",
+        "driveId": {
+          "__rl": true,
+          "value": "My Drive",
+          "mode": "list",
+          "cachedResultName": "My Drive",
+          "cachedResultUrl": "https://drive.google.com/drive/my-drive"
+        },
+        "folderId": {
+          "__rl": true,
+          "value": "1yg6saIaaHxV6PfiTdgusMG2ynyYyight",
+          "mode": "list",
+          "cachedResultName": "Lead Intake & Onboarding",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/1yg6saIaaHxV6PfiTdgusMG2ynyYyight"
+        },
+        "options": {
+          "simplifyOutput": true,
+          "folderColorRgb": "#082AE7"
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        620,
+        400
+      ],
+      "id": "0b3a9b72-94b3-4194-a977-049ba44dc5f9",
+      "name": "Create Client Folder",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "ZnKphiQKzN7FoPEB",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "strict",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "adc4fb31-e101-44c1-ac52-5442296abe56",
+              "leftValue": "={{ $('Clean AI Output').item.json.size }}",
+              "rightValue": "Large",
+              "operator": {
+                "type": "string",
+                "operation": "equals"
+              }
+            },
+            {
+              "id": "1c7ccb66-80de-4318-b3e6-f207356a66d2",
+              "leftValue": "={{ $('Clean AI Output').item.json.size }}",
+              "rightValue": "Medium",
+              "operator": {
+                "type": "string",
+                "operation": "equals",
+                "name": "filter.operator.equals"
+              }
+            }
+          ],
+          "combinator": "or"
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [
+        400,
+        420
+      ],
+      "id": "03e21ad6-0cf5-4fa3-b31b-e92d8899973b",
+      "name": "Client Qualification"
+    },
+    {
+      "parameters": {
+        "listId": "=6844819b9a8ddecbf6cc9ebc",
+        "name": "={{ $json.name }}",
+        "description": "=**Contact:** {{ $('Webhook').item.json.body.name }} {{ $('Webhook').item.json.body.email }}\n\n\n\n**Service Request:** {{ $('Clean AI Output').item.json.service }} **AI Summary:** {{ $('Clean AI Output').item.json.summary }} \n **Google Drive Folder:** {{ $json.name }}",
+        "additionalFields": {}
+      },
+      "type": "n8n-nodes-base.trello",
+      "typeVersion": 1,
+      "position": [
+        840,
+        400
+      ],
+      "id": "c452552b-286f-46a7-ae8b-d11ce2e8aa31",
+      "name": "Create Trello Card",
+      "credentials": {
+        "trelloApi": {
+          "id": "6iPTHdhJKdTCp8HL",
+          "name": "Trello account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C090GT7L9C2",
+          "mode": "list",
+          "cachedResultName": "new-leads"
+        },
+        "text": "=🚀 *New High-Value Lead!* 🚀  \n> *Company:* ` {{ $('Webhook').item.json.body.company }} `\n> *Service:* `{{ $('Clean AI Output').item.json.service }}` \n> *Summary:* `{{ $('Clean AI Output').item.json.summary }}`  <{{ $('Create Trello Card').item.json.url }}|View Trello Card>",
+        "otherOptions": {
+          "includeLinkToWorkflow": true
+        }
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        1040,
+        400
+      ],
+      "id": "f1ee31e5-939c-4cae-868c-e9b8909a6c13",
+      "name": "Notify #new-leads",
+      "webhookId": "8be6d702-1723-49c7-9daf-97370a7e9c55",
+      "credentials": {
+        "slackApi": {
+          "id": "ZOhAUnNqZ9m22YXN",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "sendTo": "={{ $('Webhook').item.json.body.email }}",
+        "subject": "=Thanks and Welcome to our Services",
+        "emailType": "text",
+        "message": "=\n\nHello {{ $('Webhook').item.json.body.name }}\n\nThank you for reaching out and showing interest in our services, we truly appreciate it.\n\nIf you have any specific questions or need more details, feel free to reply directly to this email. We’re here to provide the information you need and assist in any way we can.\n\nLooking forward to supporting you further.\n\nWarm regards,",
+        "options": {
+          "appendAttribution": false
+        }
+      },
+      "type": "n8n-nodes-base.gmail",
+      "typeVersion": 2.1,
+      "position": [
+        580,
+        580
+      ],
+      "id": "a378c6c9-5a64-468b-aa3e-cd6070133947",
+      "name": "Gmail",
+      "webhookId": "8daa7729-d219-4582-be17-be957cb27d15",
+      "retryOnFail": true,
+      "credentials": {
+        "gmailOAuth2": {
+          "id": "HlMfe7wkfcPlvmsq",
+          "name": "Gmail account"
+        }
+      },
+      "onError": "continueErrorOutput"
+    },
+    {
+      "parameters": {},
+      "type": "n8n-nodes-base.errorTrigger",
+      "typeVersion": 1,
+      "position": [
+        -40,
+        760
+      ],
+      "id": "ebfa38e9-5624-44df-b686-d439af6c1192",
+      "name": "Error Trigger"
+    },
+    {
+      "parameters": {
+        "content": "## Error Handling Path\n### Triggered on any node error, this block notifies the Admin with details and prompts action.x ",
+        "height": 340,
+        "width": 540
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "typeVersion": 1,
+      "position": [
+        -60,
+        640
+      ],
+      "id": "237bedab-f822-478a-86bc-728370c7c8b8",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "select": "channel",
+        "channelId": {
+          "__rl": true,
+          "value": "C090DURJ0HK",
+          "mode": "list",
+          "cachedResultName": "workflow-errors"
+        },
+        "text": "=**WORKFLOW ERROR** \n*Workflow Name:* `{{ $workflow.name }}` \n*Failed Node:* `{{ $json.execution.error.node.name }}` \n*Error Message:* `{{ $json.execution.error.message }}` \n*Link to Failed Execution:* {{ $json.execution.url }} \n\nPlease investigate immediately.",
+        "otherOptions": {}
+      },
+      "type": "n8n-nodes-base.slack",
+      "typeVersion": 2.3,
+      "position": [
+        300,
+        760
+      ],
+      "id": "2437de14-2711-48d7-a70c-c83c434d6c83",
+      "name": "Notfiy #workflow-errors",
+      "webhookId": "893de566-9bc0-417a-8b64-830e38b9c9fc",
+      "retryOnFail": true,
+      "credentials": {
+        "slackApi": {
+          "id": "ZOhAUnNqZ9m22YXN",
+          "name": "Slack account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "a128819d-b393-44ae-9cbf-6e8cee73a697",
+        "authentication": "headerAuth",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [
+        -600,
+        420
+      ],
+      "id": "0e886b8c-4d33-4382-9c4c-d9bce27554c1",
+      "name": "Webhook",
+      "webhookId": "a128819d-b393-44ae-9cbf-6e8cee73a697",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "i6wvuyfJLigaMwGX",
+          "name": "Webhook Header Auth "
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "AI Agent": {
+      "main": [
+        [
+          {
+            "node": "Clean AI Output",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Clean AI Output": {
+      "main": [
+        [
+          {
+            "node": "Save to Supabase",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Save to Supabase": {
+      "main": [
+        [
+          {
+            "node": "Client Qualification",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Client Qualification": {
+      "main": [
+        [
+          {
+            "node": "Create Client Folder",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Gmail",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Client Folder": {
+      "main": [
+        [
+          {
+            "node": "Create Trello Card",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Create Trello Card": {
+      "main": [
+        [
+          {
+            "node": "Notify #new-leads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Error Trigger": {
+      "main": [
+        [
+          {
+            "node": "Notfiy #workflow-errors",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Webhook": {
+      "main": [
+        [
+          {
+            "node": "AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": true,
+  "settings": {
+    "executionOrder": "v1",
+    "callerPolicy": "workflowsFromSameOwner",
+    "errorWorkflow": "jxwPyRlmXOBw4adM"
+  },
+  "versionId": "e0bd498b-0a70-4ed2-a486-8b300ec302f6",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "8e58eb7146c9984eb591b78514f724ac4bb75c7185b48e47fa000476c831d362"
+  },
+  "id": "jxwPyRlmXOBw4adM",
+  "tags": []
+}
