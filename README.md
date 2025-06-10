@@ -7,6 +7,10 @@
 
 #### 1. Project Overview
 
+![Screenshot from 2025-06-10 13-59-33](https://github.com/user-attachments/assets/50a065c5-8300-4e7e-b01c-bb0db1e47671)
+
+
+
 This project addresses the common business challenges of manual client intake. The goal was to design and deploy a fully automated pipeline that captures new leads from a website, uses Artificial Intelligence to qualify and enrich the data, sets up the necessary project infrastructure, and instantly notifies the relevant team members.
 
 The result is a resilient, scalable, and secure system that transforms a slow, error-prone manual process into an instantaneous, intelligent, and reliable workflow. This system saves significant administrative time, ensures no lead is ever missed, and allows the sales team to focus on high-value activities.
